@@ -12,20 +12,17 @@ function App() {
   const validateForm = () => {
     const newErrors = {};
 
-    // Проверка имени пользователя
     if (!formData.username.trim()) {
       newErrors.username = "Имя пользователя обязательно";
     } else if (formData.username.length < 5) {
       newErrors.username = "Имя пользователя должно быть не менее 5 символов";
     }
-    // Проверка email
     const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
     if (!formData.email) {
       newErrors.email = "Email обязателен";
     } else if (!emailRegex.test(formData.email)) {
       newErrors.email = "Введите корректный email";
     }
-    // Проверка пароля
     if (!formData.password) {
       newErrors.password = "Пароль обязателен";
     } else if (formData.password.length < 8 || formData.password.length > 32) {
@@ -37,7 +34,6 @@ function App() {
       newErrors.password =
         "Пароль должен содержать минимум одну строчную букву, одну заглавную букву, одну цифру и один специальный символ";
     }
-    // Проверка подтверждения пароля
     if (formData.password !== formData.confirmPassword) {
       newErrors.confirmPassword = "Пароли не совпадают";
     }
@@ -47,7 +43,6 @@ function App() {
     e.preventDefault();
     const newErrors = validateForm();
     if (Object.keys(newErrors).length === 0) {
-      // Здесь можно добавить логику отправки формы
       console.log("Форма отправлена:", formData);
     } else {
       setErrors(newErrors);
