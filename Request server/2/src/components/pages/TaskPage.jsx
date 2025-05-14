@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
-import axios from 'axios';
+import { useTodoContext } from '../../contexts/TodoContext';
 import './TaskPage.css';
 
 const TaskPage = () => {
@@ -9,26 +9,21 @@ const TaskPage = () => {
     const [editedTask, setEditedTask] = useState('');
     const { id } = useParams();
     const navigate = useNavigate();
+    const { todos, updateTodo, deleteTodo, toggleTodoComplete } = useTodoContext();
 
     useEffect(() => {
-        const fetchTask = async () => {
-            try {
-                const response = await axios.get(`http://localhost:3001/todos/${id}`);
-                setTask(response.data);
-                setEditedTask(response.data.title);
-            } catch (error) {
-                console.error('Error fetching task:', error);
-                navigate('/404');
-            }
-        };
-        fetchTask();
-    }, [id, navigate]);
+        const currentTask = todos.find(t => t.id === id);
+        if (currentTask) {
+            setTask(currentTask);
+            setEditedTask(currentTask.title);
+        } else {
+            navigate('/404');
+        }
+    }, [id, todos, navigate]);
 
     const handleEdit = async () => {
         try {
-            await axios.patch(`http://localhost:3001/todos/${id}`, {
-                title: editedTask
-            });
+            await updateTodo(id, { title: editedTask });
             setTask({ ...task, title: editedTask });
             setIsEditing(false);
         } catch (error) {
@@ -38,7 +33,7 @@ const TaskPage = () => {
 
     const handleDelete = async () => {
         try {
-            await axios.delete(`http://localhost:3001/todos/${id}`);
+            await deleteTodo(id);
             navigate('/');
         } catch (error) {
             console.error('Error deleting task:', error);
@@ -47,9 +42,7 @@ const TaskPage = () => {
 
     const handleToggleComplete = async () => {
         try {
-            await axios.patch(`http://localhost:3001/todos/${id}`, {
-                completed: !task.completed
-            });
+            await toggleTodoComplete(id, task.completed);
             setTask({ ...task, completed: !task.completed });
         } catch (error) {
             console.error('Error updating task:', error);
