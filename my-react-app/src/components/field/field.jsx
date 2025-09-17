@@ -1,9 +1,22 @@
-import { FieldLayout } from './field-layout.jsx';
-import { store } from '../../store';
-import { handleCellClick } from '../../handlers/handle-cell-click';
+import { useSelector, useDispatch } from 'react-redux';
+import { selectBoard } from '../../Selectors/board-selectors';
+import { boardCellClicked } from '../../Actions/board-actions';
 
-export const Field = () => {
-	const { field } = store.getState();
-	
-	return <FieldLayout field={field} handleCellClick={handleCellClick} />;
-};
+export default function Field() {
+  const board = useSelector(selectBoard);
+  const dispatch = useDispatch();
+
+  return (
+    <div>
+      {board.map((row, ri) => (
+        <div key={ri}>
+          {row.map((cell, ci) => (
+            <button key={ci} onClick={() => dispatch(boardCellClicked(ri, ci))}>
+              {cell}
+            </button>
+          ))}
+        </div>
+      ))}
+    </div>
+  );
+}
