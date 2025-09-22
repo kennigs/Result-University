@@ -1,111 +1,88 @@
-import React, { useState } from 'react';
-import { BrowserRouter as Router, Routes, Route, Link } from 'react-router-dom';
-import TaskPage from './components/pages/TaskPage';
-import NotFoundPage from './components/pages/NotFoundPage';
-import { TodoProvider } from './contexts/TodoContext';
-import { ThemeProvider, useThemeContext } from './contexts/ThemeContext';
-import { useTodoContext } from './contexts/TodoContext';
-import './App.css';
+import { useEffect, useState } from 'react';
+import { ControlPanel, Todo } from './components';
+import { createTodo, readTodos, updateTodo, deleteTodo } from './api';
+import { addTodoInTodos, findTodo, removeTodoInTodos, setTodoInTodos } from './utils';
+import { NEW_TODO_ID } from './constants';
+import styles from './app.module.css';
 
-const TodoList = () => {
-	const [newTodo, setNewTodo] = useState('');
-	const { 
-		searchQuery, 
-		setSearchQuery, 
-		sortType, 
-		setSortType, 
-		addTodo, 
-		toggleTodoComplete,
-		getFilteredAndSortedTodos 
-	} = useTodoContext();
-	const { theme, toggleTheme } = useThemeContext();
+export const App = () => {
+	const [todos, setTodos] = useState([]);
+	const [searchPhrase, setSearchPhrase] = useState('');
+	const [isAlphabetSorting, setIsAlphabetSorting] = useState(false);
 
-	const handleAddTodo = async (e) => {
-		e.preventDefault();
-		if (!newTodo.trim()) return;
-		await addTodo(newTodo);
-		setNewTodo('');
+	const onTodoAdd = () => {
+		setTodos(addTodoInTodos(todos));
 	};
 
-	const filteredAndSortedTodos = getFilteredAndSortedTodos();
+	const onTodoSave = (todoId) => {
+		const { title, completed } = findTodo(todos, todoId) || {};
+
+		if (todoId === NEW_TODO_ID) {
+			createTodo({ title, completed }).then((todo) => {
+				let updatedTodos = setTodoInTodos(todos, {
+					id: NEW_TODO_ID,
+					isEditing: false,
+				});
+				updatedTodos = removeTodoInTodos(updatedTodos, NEW_TODO_ID);
+				updatedTodos = addTodoInTodos(updatedTodos, todo);
+				setTodos(updatedTodos);
+			});
+		} else {
+			updateTodo({ id: todoId, title }).then(() => {
+				setTodos(setTodoInTodos(todos, { id: todoId, isEditing: false }));
+			});
+		}
+	};
+
+	const onTodoEdit = (id) => {
+		setTodos(setTodoInTodos(todos, { id, isEditing: true }));
+	};
+
+	const onTodoTitleChange = (id, newTitle) => {
+		setTodos(setTodoInTodos(todos, { id, title: newTitle }));
+	};
+
+	const onTodoCompletedChange = (id, newCompleted) => {
+		updateTodo({ id, completed: newCompleted }).then(() => {
+			setTodos(setTodoInTodos(todos, { id, completed: newCompleted }));
+		});
+	};
+
+	const onTodoRemove = (id) => {
+		deleteTodo(id).then(() => setTodos(removeTodoInTodos(todos, id)));
+	};
+
+	useEffect(() => {
+		readTodos(searchPhrase, isAlphabetSorting).then((loadedTodos) =>
+			setTodos(loadedTodos),
+		);
+	}, [searchPhrase, isAlphabetSorting]);
 
 	return (
-		<div className="main-page">
-			<button className="theme-toggle" onClick={toggleTheme}>
-				{theme === 'light' ? '🌙' : '☀️'}
-			</button>
-			<h1>Список задач</h1>
-			<form onSubmit={handleAddTodo} className="add-todo-form">
-				<input
-					type="text"
-					value={newTodo}
-					onChange={(e) => {
-						if (e.target.value.length <= 150) {
-							setNewTodo(e.target.value);
+		<div className={styles.app}>
+			<ControlPanel
+				onTodoAdd={onTodoAdd}
+				onSearch={setSearchPhrase}
+				onSorting={setIsAlphabetSorting}
+			/>
+			<div>
+				{todos.map(({ id, title, completed, isEditing = false }) => (
+					<Todo
+						key={id}
+						id={id}
+						title={title}
+						completed={completed}
+						isEditing={isEditing}
+						onEdit={() => onTodoEdit(id)}
+						onTitleChange={(newTitle) => onTodoTitleChange(id, newTitle)}
+						onCompletedChange={(newCompleted) =>
+							onTodoCompletedChange(id, newCompleted)
 						}
-					}}
-					placeholder="Добавить новую задачу (макс. 150 символов)"
-					className="todo-input"
-					maxLength={150}
-				/>
-				<button type="submit" className="add-button">Добавить</button>
-			</form>
-			<div className="controls">
-				<input
-					type="text"
-					value={searchQuery}
-					onChange={(e) => setSearchQuery(e.target.value)}
-					placeholder="Поиск задач..."
-					className="search-input"
-				/>
-				<select
-					value={sortType}
-					onChange={(e) => setSortType(e.target.value)}
-					className="sort-select"
-				>
-					<option value="id-asc">По ID (возрастание)</option>
-					<option value="id-desc">По ID (убывание)</option>
-					<option value="title-asc">По алфавиту (А-Я)</option>
-					<option value="title-desc">По алфавиту (Я-А)</option>
-				</select>
-			</div>
-			<div className="todos-list">
-				{filteredAndSortedTodos.map(todo => (
-					<div key={todo.id} className="todo-item">
-						<input
-							type="checkbox"
-							checked={todo.completed}
-							onChange={() => toggleTodoComplete(todo.id, todo.completed)}
-							className="todo-checkbox"
-						/>
-						<Link to={`/task/${todo.id}`} className="todo-link">
-							<p className={`todo-text ${todo.completed ? 'completed' : ''}`}>
-								{todo.title}
-							</p>
-						</Link>
-					</div>
+						onSave={() => onTodoSave(id)}
+						onRemove={() => onTodoRemove(id)}
+					/>
 				))}
 			</div>
 		</div>
 	);
 };
-
-function App() {
-	return (
-		<ThemeProvider>
-			<TodoProvider>
-				<Router>
-					<div className="app">
-						<Routes>
-							<Route path="/" element={<TodoList />} />
-							<Route path="/task/:id" element={<TaskPage />} />
-							<Route path="*" element={<NotFoundPage />} />
-						</Routes>
-					</div>
-				</Router>
-			</TodoProvider>
-		</ThemeProvider>
-	);
-}
-
-export default App;
